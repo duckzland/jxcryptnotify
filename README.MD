@@ -7,6 +7,10 @@ sudo apt -y install golang
 
 - Build the package
 ```
+# Older go version might need this
+go get "github.com/tidwall/gjson"
+
+# Build the package
 go build main.go
 ```
 
