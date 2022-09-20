@@ -7,6 +7,7 @@ import (
     "io"
     "fmt"
     "log"
+    "log/syslog"
     "strings"
     "strconv"
     "net/smtp"
@@ -64,6 +65,8 @@ func LoadConfig() {
 
     if err != nil {
         log.Fatal(err)
+    } else {
+        log.Print("Configuration Loaded")
     }
 }
 
@@ -149,7 +152,7 @@ func SendEmail(recipient string, subject string, message string) {
 
     c.Quit()
 
-    fmt.Sprintf("Sent Email to %s", recipient)
+    log.Print(fmt.Sprintf("Sent Email to %s", recipient))
 }
 
 
@@ -176,6 +179,8 @@ func GetData(Job JobConfigType) string {
     resp, err := client.Do(req);
     if err != nil {
         log.Fatal(err)
+    } else {
+        log.Print("Fetched data from CMC")
     }
 
     // @todo better error reporting!
@@ -205,7 +210,7 @@ func ExamineData(JsonData string, Job JobConfigType) {
                 return true
             }
 
-            sourceValue, err := strconv.ParseFloat(Job.SourceValue, 64)
+            sourceValue, err := strconv.ParseFloat(Job.TargetValue, 64)
             if err != nil {
                 log.Fatal(err)
             }
@@ -216,21 +221,12 @@ func ExamineData(JsonData string, Job JobConfigType) {
             }
 
             subject := fmt.Sprintf("Monitored Target Price for %s %s %s Reached", Job.SourceCoin, Job.Comparison, Job.TargetCoin)
-            message := fmt.Sprintf("Current price for %s is %f, configured detection to detect %s:%f %s %s:%f reached", Job.TargetCoin, targetValue, Job.SourceCoin, sourceValue, Job.Comparison, Job.TargetCoin, targetValue);
+            message := fmt.Sprintf("Current conversion from %s:%s is %s:%f, which has reached the configured target of %s:%f %s %s:%f", Job.SourceCoin, Job.SourceValue, Job.TargetCoin, targetValue, Job.TargetCoin, sourceValue, Job.Comparison, Job.TargetCoin, targetValue);
 
-            switch Job.Comparison {
-                case ">":
-                    if sourceValue > targetValue {
-                        SendEmail(Job.Email, subject, message)
-                    }
-                case "<":
-                    if sourceValue < targetValue {
-                        SendEmail(Job.Email, subject, message)
-                    }
-                case "=":
-                    if sourceValue == targetValue {
-                        SendEmail(Job.Email, subject, message)
-                    }
+            if (Job.Comparison == ">" && sourceValue > targetValue) || (Job.Comparison == "<" && sourceValue < targetValue) || (Job.Comparison == "=" && sourceValue == targetValue) {
+                SendEmail(Job.Email, subject, message)
+            } else {
+                log.Print(fmt.Sprintf("Monitored Target Price for %s %s %s not reached yet", Job.SourceCoin, Job.Comparison, Job.TargetCoin))
             }
 
             return false
@@ -242,6 +238,14 @@ func ExamineData(JsonData string, Job JobConfigType) {
 
 
 func main() {
+
+    syslogger, err := syslog.New(syslog.LOG_INFO, "jxcryptonotify")
+    if err != nil {
+        log.Fatalln(err)
+    }
+
+    log.SetOutput(syslogger)
+
     LoadConfig()
 
     for _, c := range Config.Jobs {
