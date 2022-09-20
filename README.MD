@@ -10,6 +10,10 @@ sudo apt -y install golang
 # Older go version might need this
 go get "github.com/tidwall/gjson"
 
+# tested with go version 1.13.8
+# Might need to update when using 1.19 or 2.x version
+# go version go1.13.8 linux/amd64
+
 # Build the package
 go build main.go
 ```
