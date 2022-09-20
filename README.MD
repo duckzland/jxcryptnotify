@@ -23,9 +23,9 @@ go build main.go
 
 - Create Cronjob to automatically fire the compiled program at x interval
 
-Under the linux user account
+Under the linux user account, as best practice.. Do Not Run this as root account!
 ```
-crontab -e [username]
+crontab -e
 ```
 
 Setup cron to fire every 10 minutes (Free coinmarketcap account has limit for 300 hits perday)
