@@ -1,0 +1,34 @@
+{
+    "servers": {
+        "email": {
+            "from": "nobody@nothing.local",
+            "subject": "My cool notification",
+            "host": "mail.mysuperserver.local",
+            "port": "465",
+            "username": "nobody@nothing.local",
+            "password": "leavelleaveleave"
+        },
+        "coinmarketcap": {
+            "key" : "obtain-the-proper-key-at-coinmarketcap-com",
+            "endpoint": "https://pro-api.coinmarketcap.com/v2/tools/price-conversion"
+        }
+    },
+    "jobs": [
+        {
+            "email": "senditto@me.local",
+            "source_coin": "DOT",
+            "target_coin": "SOL",
+            "source_value": "0.5",
+            "target_value": "0.1",
+            "comparison": ">"
+        },
+        {
+            "email": "iwantittoo@me.local",
+            "source_coin": "DOT",
+            "target_coin": "SOL",
+            "source_value": "0.5",
+            "target_value": "0.1",
+            "comparison": "<"
+        }
+    ]
+}

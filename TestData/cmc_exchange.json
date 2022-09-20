@@ -1,0 +1,25 @@
+{
+  "status": {
+    "timestamp": "2022-09-20T12:33:00.123Z",
+    "error_code": 0,
+    "error_message": null,
+    "elapsed": 33,
+    "credit_count": 1,
+    "notice": null
+  },
+  "data": [
+    {
+      "id": 6636,
+      "symbol": "DOT",
+      "name": "Polkadot",
+      "amount": 0.5,
+      "last_updated": "2022-09-20T12:32:00.000Z",
+      "quote": {
+        "SOL": {
+          "price": 0.09776652038304759,
+          "last_updated": "2022-09-20T12:32:00.000Z"
+        }
+      }
+    }
+  ]
+}
