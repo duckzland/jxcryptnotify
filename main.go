@@ -6,6 +6,7 @@ import (
     "os"
     "io"
     "fmt"
+    "time"
     "log"
     "log/syslog"
     "strings"
@@ -15,11 +16,12 @@ import (
     "net/url"
     "crypto/tls"
     "io/ioutil"
-    "github.com/tidwall/gjson"
 )
 
-var Config ConfigType
-
+/**
+ * Defining Struct for config json
+ * @type {String}
+ */
 type ConfigType struct {
     Servers ServerConfigType `json:"servers"`
     Jobs [] JobConfigType `json:"jobs"`
@@ -49,12 +51,97 @@ type JobConfigType struct {
 }
 
 type CoinmarketcapConfigType struct {
-    Key string `json:"key"`
-    Endpoint string `json:"endpoint"`
+    DataEndpoint string `json:"data_endpoint"`
+    ExchangeEndpoint string `json:"exchange_endpoint"`
+}
+
+/**
+ * Defining struct for Coinmarketcap cryptos.json
+ * @type {String}
+ */
+type CryptosType struct {
+    Values []CryptosValuesType `json:"values"`
+}
+
+type CryptosValuesType struct {
+    Id int64
+    Name string
+    Symbol string
 }
 
 
-func LoadConfig() {
+/**
+ * Defining struct for coinmarketcap exhange data
+ * @type {[type]}
+ */
+type ExchangeDataType struct {
+    SourceSymbol string
+    SourceId int64
+    SourceAmount float64
+    TargetSymbol string
+    TargetId int64
+    TargetAmount float64
+}
+
+/**
+ * Global variables
+ */
+var Config ConfigType
+var Cryptos CryptosType
+
+
+/**
+ * Custom UnmarshalJSON for crypto.json
+ */
+func (cp *CryptosValuesType) UnmarshalJSON(data []byte) error {
+    var v []interface{}
+    err := json.Unmarshal(data, &v)
+    if err != nil {
+        log.Fatal(err)
+        return err
+    }
+
+    cp.Id = int64(v[0].(float64))
+    cp.Name = v[1].(string)
+    cp.Symbol = v[2].(string)
+
+    return nil
+}
+
+
+/**
+ * Custom UnmarshalJSON for CMC Exchange sjon
+ */
+func (ex *ExchangeDataType) UnmarshalJSON(data []byte) error {
+
+
+    var v map[string]interface{}
+    err := json.Unmarshal(data, &v)
+    if err != nil {
+        log.Fatal(err)
+        return err
+    }
+
+    sc := v["data"]
+    tc := v["data"].(map[string]interface{})["quote"].([]interface{})[0]
+
+    // CMC Json data is weird the the id is in string while cryptoId is in int64 (but golang cast this as float64)
+    ex.SourceSymbol =  sc.(map[string]interface{})["symbol"].(string)
+    ex.SourceId, _ = strconv.ParseInt(sc.(map[string]interface{})["id"].(string), 10, 64)
+    ex.SourceAmount =  sc.(map[string]interface{})["amount"].(float64)
+
+    ex.TargetSymbol = tc.(map[string]interface{})["symbol"].(string)
+    ex.TargetId = int64(tc.(map[string]interface{})["cryptoId"].(float64))
+    ex.TargetAmount = tc.(map[string]interface{})["price"].(float64)
+
+    return nil
+}
+
+
+/**
+ * Load Configuration Json into memory
+ */
+func loadConfig() {
 
     b := bytes.NewBuffer(nil)
     f, _ := os.Open("config.json")
@@ -71,7 +158,29 @@ func LoadConfig() {
 }
 
 
-func SendEmail(recipient string, subject string, message string) {
+/**
+ * Load CMC Crypto.json to memory
+ */
+func loadCryptos() {
+    b := bytes.NewBuffer(nil)
+    f, _ := os.Open("cryptos.json")
+    io.Copy(b, f)
+    f.Close()
+
+    err := json.Unmarshal(b.Bytes(), &Cryptos)
+
+    if err != nil {
+        log.Fatal(err)
+    } else {
+        log.Print("Cryptos Loaded")
+    }
+}
+
+
+/**
+ * Function for sending SMTP Email
+ */
+func sendEmail(recipient string, subject string, message string) {
 
     C := Config.Servers.Email;
 
@@ -156,87 +265,203 @@ func SendEmail(recipient string, subject string, message string) {
 }
 
 
-func GetData(Job JobConfigType) string {
+/**
+ * Loading cryptos.json from CMC
+ */
+func getTickerData() string {
 
-    C := Config.Servers.Coinmarketcap;
+    C := Config.Servers.Coinmarketcap
 
+    url := C.DataEndpoint
     client := &http.Client{}
-    req, err := http.NewRequest("GET", C.Endpoint, nil)
+    req, err := http.NewRequest("GET", url, nil)
 
     if err != nil {
         log.Fatal(err)
     }
 
+    resp, err := client.Do(req);
+
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    respBody, err := ioutil.ReadAll(resp.Body)
+
+    if err != nil {
+        log.Fatal(err)
+    } else {
+        log.Print("Fetched cryptodata from CMC")
+    }
+
+    return string(respBody)
+}
+
+
+/**
+ * Get the exchange data from CMC
+ */
+func getExchangeData(Job JobConfigType) string {
+
+    C := Config.Servers.Coinmarketcap
+
+    client := &http.Client{}
+    req, err := http.NewRequest("GET", C.ExchangeEndpoint, nil)
+
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    sc := convertCryptoIdFromSymbol(Job.SourceCoin)
+    if sc == 0 {
+        log.Fatal("Failed to get proper crypto id")
+    }
+
+    tc := convertCryptoIdFromSymbol(Job.TargetCoin)
+    if tc == 0 {
+        log.Fatal("Failed to get proper crypto id")
+    }
+
     q := url.Values{}
     q.Add("amount", Job.SourceValue)
-    q.Add("symbol", Job.SourceCoin)
-    q.Add("convert", Job.TargetCoin)
+    q.Add("id", strconv.FormatInt(sc, 10))
+    q.Add("convert_id", strconv.FormatInt(tc, 10))
 
-    req.Header.Set("Accepts", "application/json")
-    req.Header.Add("X-CMC_PRO_API_KEY", C.Key)
+    // req.Header.Set("Accepts", "application/json")
+    // req.Header.Add("X-CMC_PRO_API_KEY", C.Key)
     req.URL.RawQuery = q.Encode()
+
+    //fmt.Printf("%s", req);
 
     resp, err := client.Do(req);
     if err != nil {
         log.Fatal(err)
     } else {
-        log.Print("Fetched data from CMC")
+        log.Print("Fetched exchange data from CMC")
     }
 
     // @todo better error reporting!
     // fmt.Println(resp.Status);
     respBody, _ := ioutil.ReadAll(resp.Body)
 
-    //fmt.Println(string(respBody));
+    // fmt.Println(string(respBody));
 
     return string(respBody)
 }
 
 
-func ExamineData(JsonData string, Job JobConfigType) {
+/**
+ * Examine the exhange data
+ */
+func examineData(JsonData string, Job JobConfigType) {
 
-    gjson.Get(JsonData, "data" ).ForEach(func(_, data gjson.Result) bool {
+    var Exchange ExchangeDataType
+    err := json.Unmarshal([]byte(JsonData), &Exchange)
 
-        raw := data.String()
-        sourceCoin := gjson.Get(raw, "symbol").String()
+    if err != nil {
+        log.Fatal(err)
+    }
 
-        if strings.ToLower(sourceCoin) != strings.ToLower(Job.SourceCoin) {
-            return true
+    if (strings.ToLower(Exchange.SourceSymbol) == strings.ToLower(Job.SourceCoin)) &&
+        (strings.ToLower(Exchange.TargetSymbol) == strings.ToLower(Job.TargetCoin)) {
+
+        sourceValue, _ := strconv.ParseFloat(Job.TargetValue, 64)
+        targetValue := Exchange.TargetAmount
+
+        subject := fmt.Sprintf("Monitored Target Price for %s %s %s Reached", Job.SourceCoin, Job.Comparison, Job.TargetCoin)
+        message := fmt.Sprintf("Current conversion from %s:%s is %s:%f, which has reached the configured target of %s:%f %s %s:%f",
+            Job.SourceCoin,
+            Job.SourceValue,
+            Job.TargetCoin,
+            targetValue,
+            Job.TargetCoin,
+            sourceValue,
+            Job.Comparison,
+            Job.TargetCoin,
+            targetValue,
+        );
+
+        if (Job.Comparison == ">" && sourceValue > targetValue) ||
+            (Job.Comparison == "<" && sourceValue < targetValue) ||
+            (Job.Comparison == "=" && sourceValue == targetValue) {
+
+            sendEmail(Job.Email, subject, message)
+
+        } else {
+
+            log.Print(fmt.Sprintf("Monitored Target Price for %s %s %s not reached yet",
+                Job.SourceCoin,
+                Job.Comparison,
+                Job.TargetCoin,
+            ))
         }
-
-        gjson.Get(raw, "quote").ForEach(func(targetCoin, rate gjson.Result) bool {
-
-            if strings.ToLower(targetCoin.String()) != strings.ToLower(Job.TargetCoin) {
-                return true
-            }
-
-            sourceValue, err := strconv.ParseFloat(Job.TargetValue, 64)
-            if err != nil {
-                log.Fatal(err)
-            }
-
-            targetValue, err := strconv.ParseFloat(gjson.Get(rate.String(), "price").String(), 64)
-            if err != nil {
-                log.Fatal(err)
-            }
-
-            subject := fmt.Sprintf("Monitored Target Price for %s %s %s Reached", Job.SourceCoin, Job.Comparison, Job.TargetCoin)
-            message := fmt.Sprintf("Current conversion from %s:%s is %s:%f, which has reached the configured target of %s:%f %s %s:%f", Job.SourceCoin, Job.SourceValue, Job.TargetCoin, targetValue, Job.TargetCoin, sourceValue, Job.Comparison, Job.TargetCoin, targetValue);
-
-            if (Job.Comparison == ">" && sourceValue > targetValue) || (Job.Comparison == "<" && sourceValue < targetValue) || (Job.Comparison == "=" && sourceValue == targetValue) {
-                SendEmail(Job.Email, subject, message)
-            } else {
-                log.Print(fmt.Sprintf("Monitored Target Price for %s %s %s not reached yet", Job.SourceCoin, Job.Comparison, Job.TargetCoin))
-            }
-
-            return false
-        })
-
-        return false
-    })
+    }
 }
 
 
+/**
+ * Helper function for creating file
+ */
+func createFile(fileName string, textString string) {
+    out, err := os.Create(fileName)
+
+    if err != nil {
+        log.Fatalln(err)
+    }
+
+    defer out.Close()
+
+    _, err2 := out.WriteString(textString)
+
+    if err2 != nil {
+        log.Fatal(err2)
+    } else {
+        log.Print("Creating new file %s", fileName)
+    }
+
+    out.Sync()
+    out.Close()
+
+}
+
+
+/**
+ * Helper function for checking if file exists
+ */
+func fileExists(path string) (bool, error) {
+    _, err := os.Stat(path)
+    if err == nil {
+        return true, nil
+    }
+
+    if os.IsNotExist(err) {
+        return false, nil
+    }
+
+    return false, err
+}
+
+
+/**
+ * Helper function for converting crypto symbol to CMC crypto id
+ */
+func convertCryptoIdFromSymbol(symbol string) int64 {
+    s := strings.ToLower(symbol)
+
+    for _, crypto := range Cryptos.Values {
+        if strings.ToLower(crypto.Symbol) == s {
+            return crypto.Id
+        }
+    }
+
+    return 0
+}
+
+
+/**
+ * Main Function
+ * @type {[type]}
+ */
 func main() {
 
     syslogger, err := syslog.New(syslog.LOG_INFO, "jxcryptonotify")
@@ -246,10 +471,24 @@ func main() {
 
     log.SetOutput(syslogger)
 
-    LoadConfig()
+    loadConfig()
+
+    exists, err := fileExists("cryptos.json")
+    if exists == false {
+        cryptos := getTickerData()
+        createFile("cryptos.json", cryptos)
+    }
+
+    loadCryptos()
+
+    // We are using free API, be considerate and pause 10 seconds between each call!
+    duration := time.Duration(10) * time.Second
 
     for _, c := range Config.Jobs {
-        d := GetData(c)
-        ExamineData(d, c)
+
+        d := getExchangeData(c)
+        examineData(d, c)
+
+        time.Sleep(duration)
     }
 }

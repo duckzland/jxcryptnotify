@@ -9,8 +9,8 @@
             "password": "leavelleaveleave"
         },
         "coinmarketcap": {
-            "key" : "obtain-the-proper-key-at-coinmarketcap-com",
-            "endpoint": "https://pro-api.coinmarketcap.com/v2/tools/price-conversion"
+            "data_endpoint": "https://s3.coinmarketcap.com/generated/core/crypto/cryptos.json",
+            "exchange_endpoint": "https://api.coinmarketcap.com/data-api/v3/tools/price-conversion"
         }
     },
     "jobs": [

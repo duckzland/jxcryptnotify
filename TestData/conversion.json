@@ -1,0 +1,24 @@
+{
+  "data": {
+    "symbol": "DOT",
+    "id": "6636",
+    "name": "Polkadot",
+    "amount": 4500,
+    "last_updated": 1664190960000,
+    "quote": [
+      {
+        "cryptoId": 5426,
+        "symbol": "SOL",
+        "price": 873.3171223389236,
+        "lastUpdated": 1664190960000
+      }
+    ]
+  },
+  "status": {
+    "timestamp": "2022-09-26T11:17:19.608Z",
+    "error_code": "0",
+    "error_message": "SUCCESS",
+    "elapsed": "4",
+    "credit_count": 0
+  }
+}
