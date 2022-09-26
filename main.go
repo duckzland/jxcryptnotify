@@ -416,7 +416,7 @@ func createFile(fileName string, textString string) {
     if err2 != nil {
         log.Fatal(err2)
     } else {
-        log.Print("Creating new file %s", fileName)
+        log.Printf("Creating new file %s", fileName)
     }
 
     out.Sync()
