@@ -114,7 +114,6 @@ func (cp *CryptosValuesType) UnmarshalJSON(data []byte) error {
  */
 func (ex *ExchangeDataType) UnmarshalJSON(data []byte) error {
 
-
     var v map[string]interface{}
     err := json.Unmarshal(data, &v)
     if err != nil {
@@ -126,13 +125,13 @@ func (ex *ExchangeDataType) UnmarshalJSON(data []byte) error {
     tc := v["data"].(map[string]interface{})["quote"].([]interface{})[0]
 
     // CMC Json data is weird the the id is in string while cryptoId is in int64 (but golang cast this as float64)
-    ex.SourceSymbol =  sc.(map[string]interface{})["symbol"].(string)
-    ex.SourceId, _ = strconv.ParseInt(sc.(map[string]interface{})["id"].(string), 10, 64)
-    ex.SourceAmount =  sc.(map[string]interface{})["amount"].(float64)
+    ex.SourceSymbol 	= sc.(map[string]interface{})["symbol"].(string)
+    ex.SourceId, _ 	= strconv.ParseInt(sc.(map[string]interface{})["id"].(string), 10, 64)
+    ex.SourceAmount 	= sc.(map[string]interface{})["amount"].(float64)
 
-    ex.TargetSymbol = tc.(map[string]interface{})["symbol"].(string)
-    ex.TargetId = int64(tc.(map[string]interface{})["cryptoId"].(float64))
-    ex.TargetAmount = tc.(map[string]interface{})["price"].(float64)
+    ex.TargetSymbol 	= tc.(map[string]interface{})["symbol"].(string)
+    ex.TargetId 	= int64(tc.(map[string]interface{})["cryptoId"].(float64))
+    ex.TargetAmount 	= tc.(map[string]interface{})["price"].(float64)
 
     return nil
 }
@@ -197,7 +196,6 @@ func sendEmail(recipient string, subject string, message string) {
     headers["MIME-Version"] = "1.0"
 	headers["Content-Type"] = "text/plain; charset=\"utf-8\""
 
-
     body := ""
     for k,v := range headers {
         body += fmt.Sprintf("%s: %s\r\n", k, v)
@@ -237,11 +235,12 @@ func sendEmail(recipient string, subject string, message string) {
         log.Fatal(err)
     }
 
+    // Failed Recipient
     if err = c.Rcpt(recipient); err != nil {
         log.Fatal(err)
     }
 
-    // Data
+    // Failed Data
     w, err := c.Data()
     if err != nil {
         log.Fatal(err)
@@ -327,12 +326,8 @@ func getExchangeData(Job JobConfigType) string {
     q.Add("id", strconv.FormatInt(sc, 10))
     q.Add("convert_id", strconv.FormatInt(tc, 10))
 
-    // req.Header.Set("Accepts", "application/json")
-    // req.Header.Add("X-CMC_PRO_API_KEY", C.Key)
     req.URL.RawQuery = q.Encode()
-
-    //fmt.Printf("%s", req);
-
+	
     resp, err := client.Do(req);
     if err != nil {
         log.Fatal(err)
@@ -340,10 +335,11 @@ func getExchangeData(Job JobConfigType) string {
         log.Print("Fetched exchange data from CMC")
     }
 
-    // @todo better error reporting!
-    // fmt.Println(resp.Status);
     respBody, _ := ioutil.ReadAll(resp.Body)
-
+	
+    // @todo better error reporting, check the response http status
+    // and CMC error status as well
+    // fmt.Println(resp.Status);
     // fmt.Println(string(respBody));
 
     return string(respBody)
@@ -460,10 +456,10 @@ func convertCryptoIdFromSymbol(symbol string) int64 {
 
 /**
  * Main Function
- * @type {[type]}
  */
 func main() {
-
+    
+    // Using syslogger for logs
     syslogger, err := syslog.New(syslog.LOG_INFO, "jxcryptonotify")
     if err != nil {
         log.Fatalln(err)
@@ -471,19 +467,23 @@ func main() {
 
     log.SetOutput(syslogger)
 
+    // Loading configuration config.json
     loadConfig()
 
+    // Fetching cryptos.json from local or CMC
     exists, err := fileExists("cryptos.json")
     if exists == false {
         cryptos := getTickerData()
         createFile("cryptos.json", cryptos)
     }
 
+    // Loading cryptos.json
     loadCryptos()
 
     // We are using free API, be considerate and pause 10 seconds between each call!
     duration := time.Duration(10) * time.Second
 
+    // Processing Jobs
     for _, c := range Config.Jobs {
 
         d := getExchangeData(c)
