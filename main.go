@@ -20,7 +20,6 @@ import (
 
 /**
  * Defining Struct for config json
- * @type {String}
  */
 type ConfigType struct {
     Servers ServerConfigType `json:"servers"`
@@ -57,7 +56,6 @@ type CoinmarketcapConfigType struct {
 
 /**
  * Defining struct for Coinmarketcap cryptos.json
- * @type {String}
  */
 type CryptosType struct {
     Values []CryptosValuesType `json:"values"`
@@ -72,7 +70,6 @@ type CryptosValuesType struct {
 
 /**
  * Defining struct for coinmarketcap exhange data
- * @type {[type]}
  */
 type ExchangeDataType struct {
     SourceSymbol string
