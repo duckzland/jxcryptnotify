@@ -29,7 +29,9 @@ type ConfigType struct {
 
 type ServerConfigType struct {
     Email EmailConfigType `json:"email"`
-    Coinmarketcap CoinmarketcapConfigType `json:"coinmarketcap"`
+    Endpoint EndpointConfigType `json:"endpoint"`
+    Syslog bool `json:"syslog"`
+    Delay int64 `json:"delay"`
 }
 
 type EmailConfigType struct {
@@ -50,13 +52,13 @@ type JobConfigType struct {
     Comparison string `json:"comparison"`
 }
 
-type CoinmarketcapConfigType struct {
+type EndpointConfigType struct {
     DataEndpoint string `json:"data_endpoint"`
     ExchangeEndpoint string `json:"exchange_endpoint"`
 }
 
 /**
- * Defining struct for Coinmarketcap cryptos.json
+ * Defining struct for Endpoint cryptos.json
  * @type {String}
  */
 type CryptosType struct {
@@ -71,7 +73,7 @@ type CryptosValuesType struct {
 
 
 /**
- * Defining struct for coinmarketcap exhange data
+ * Defining struct for endpoint exhange data
  * @type {[type]}
  */
 type ExchangeDataType struct {
@@ -270,7 +272,7 @@ func sendEmail(recipient string, subject string, message string) {
  */
 func getTickerData() string {
 
-    C := Config.Servers.Coinmarketcap
+    C := Config.Servers.Endpoint
 
     url := C.DataEndpoint
     client := &http.Client{}
@@ -303,7 +305,7 @@ func getTickerData() string {
  */
 func getExchangeData(Job JobConfigType) string {
 
-    C := Config.Servers.Coinmarketcap
+    C := Config.Servers.Endpoint
 
     client := &http.Client{}
     req, err := http.NewRequest("GET", C.ExchangeEndpoint, nil)
@@ -381,10 +383,11 @@ func examineData(JsonData string, Job JobConfigType) {
             targetValue,
         );
 
-        if (Job.Comparison == ">" && sourceValue > targetValue) ||
-            (Job.Comparison == "<" && sourceValue < targetValue) ||
+        if (Job.Comparison == ">" && sourceValue < targetValue) ||
+            (Job.Comparison == "<" && sourceValue > targetValue) ||
             (Job.Comparison == "=" && sourceValue == targetValue) {
 
+            log.Print(message)
             sendEmail(Job.Email, subject, message)
 
         } else {
@@ -464,14 +467,16 @@ func convertCryptoIdFromSymbol(symbol string) int64 {
  */
 func main() {
 
-    syslogger, err := syslog.New(syslog.LOG_INFO, "jxcryptonotify")
-    if err != nil {
-        log.Fatalln(err)
-    }
-
-    log.SetOutput(syslogger)
-
     loadConfig()
+
+    if Config.Servers.Syslog == true {
+        syslogger, err := syslog.New(syslog.LOG_INFO, "jxcryptonotify")
+        if err != nil {
+            log.Fatalln(err)
+        }
+
+        log.SetOutput(syslogger)
+    }
 
     exists, err := fileExists("cryptos.json")
     if exists == false {
@@ -479,10 +484,14 @@ func main() {
         createFile("cryptos.json", cryptos)
     }
 
+    if err != nil {
+        log.Fatalln(err)
+    }
+
     loadCryptos()
 
     // We are using free API, be considerate and pause 10 seconds between each call!
-    duration := time.Duration(10) * time.Second
+    duration := time.Duration(Config.Servers.Delay) * time.Second
 
     for _, c := range Config.Jobs {
 

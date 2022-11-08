@@ -1,5 +1,8 @@
 {
+    // Server configuration
     "servers": {
+
+        // Email server information
         "email": {
             "from": "nobody@nothing.local",
             "subject": "My cool notification",
@@ -8,27 +11,48 @@
             "username": "nobody@nothing.local",
             "password": "leavelleaveleave"
         },
-        "coinmarketcap": {
+
+        // Endpoints to fetch exchange rates from
+        "endpoints": {
             "data_endpoint": "https://s3.coinmarketcap.com/generated/core/crypto/cryptos.json",
             "exchange_endpoint": "https://api.coinmarketcap.com/data-api/v3/tools/price-conversion"
         }
     },
+
+    // Push the log into system log [linux and similar compatible system only]
+    "syslog": false,
+
+    // Delay between each job entries
+    "delay": 3600,
+
+    // Arrays of jobs to check for
     "jobs": [
         {
+             // This means the source value [1 SOL * the current sol to dot rate] < the target value [2.9 DOT]
             "email": "senditto@me.local",
-            "source_coin": "DOT",
-            "target_coin": "SOL",
-            "source_value": "0.5",
-            "target_value": "0.1",
+            "source_coin": "SOL",
+            "target_coin": "DOT",
+            "source_value": "1",
+            "target_value": "2.9",
+            "comparison": "<"
+        },
+        {
+            // This means the source value [2721 SOL * the current sol to dot rate] > the target value [12700 DOT]
+            "email": "iwantittoo@me.local",
+            "source_coin": "SOL",
+            "target_coin": "DOT",
+            "source_value": "2721",
+            "target_value": "12700",
             "comparison": ">"
         },
         {
+            // This means the source value [100 SOL * the current sol to dot rate] = the target value [1000 DOT]
             "email": "iwantittoo@me.local",
-            "source_coin": "DOT",
-            "target_coin": "SOL",
-            "source_value": "0.5",
-            "target_value": "0.1",
-            "comparison": "<"
+            "source_coin": "SOL",
+            "target_coin": "DOT",
+            "source_value": "100",
+            "target_value": "1000",
+            "comparison": "="
         }
     ]
 }
