@@ -35,7 +35,7 @@ Setup cron to fire every 10 minutes
 
 
 
-- TODO -
+### TODO ###
 1. Proper & configurable folder path for storing JSON files
 2. Daemonize the program
 3. Cache the exchange data
