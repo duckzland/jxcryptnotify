@@ -34,6 +34,7 @@ type ServerConfigType struct {
 }
 
 type EmailConfigType struct {
+    Enable bool `json:"enable"`
     From string `json:"from"`
     Subject string `json:"subject"`
     Host string `json:"host"`
@@ -191,6 +192,10 @@ func loadCryptos() {
 func sendEmail(recipient string, subject string, message string) {
 
     C := Config.Servers.Email;
+
+    if C.Enable != true {
+        return
+    }
 
     from := C.From
     host := C.Host
@@ -394,7 +399,6 @@ func examineData(JsonData string, Job JobConfigType) {
             sendEmail(Job.Email, subject, message)
 
         } else {
-
             log.Print(fmt.Sprintf("Monitored Target Price for %s %s %s not reached yet",
                 Job.SourceCoin,
                 Job.Comparison,

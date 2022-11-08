@@ -4,8 +4,14 @@
 
         // Email server information
         "email": {
+            // Disable email
+            "enable": true,
+
+            // Email content
             "from": "nobody@nothing.local",
             "subject": "My cool notification",
+
+            // SMTP server
             "host": "mail.mysuperserver.local",
             "port": "465",
             "username": "nobody@nothing.local",
