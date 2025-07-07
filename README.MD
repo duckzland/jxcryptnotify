@@ -20,8 +20,30 @@ go build main.go
 1. Get SMTP server and its configuration for : host, port, username, password
 2. Edit the config_example.json and rename it config.json
 
+- [SYSTEMD] Using Systemd to fire the program instead of cronjob
 
-- Create Cronjob to automatically fire the compiled program at x interval
+1. Copy the cryptochecker_example.service to cryptochecker.service
+2. Edit the cryptochecker.service to match your needs
+3. Copy cryptochecker.service to /etc/systemd/system/
+4. Reload systemd
+```
+sudo systemctl daemon-reload
+```
+5. Enable and start the service
+```
+sudo systemctl enable cryptochecker.service
+sudo systemctl start cryptochecker.service
+```
+6. Check the status
+```
+sudo systemctl status cryptochecker.service
+```
+7. View the logs
+```
+sudo journalctl -u cryptochecker.service
+```
+
+- [CRONTAB] Create Cronjob to automatically fire the compiled program at x interval
 
 Under the linux user account, as best practice.. Do Not Run this as root account!
 ```
