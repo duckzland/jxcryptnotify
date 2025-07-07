@@ -1,0 +1,22 @@
+[Unit]
+Description=Crypto price checker
+After=network.target
+
+[Service]
+Type=simple
+
+# Change this to your user
+User=your_user
+
+# Define the location where the checker is
+WorkingDirectory=/path/to/your/go/app
+
+# Define the main execution file
+ExecStart=/path/to/your/go/app/executable
+Restart=always
+
+# Be graceful as CMC has limits
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
