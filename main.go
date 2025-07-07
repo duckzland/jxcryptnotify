@@ -291,7 +291,11 @@ func localSendEmail(recipient string, subject string, message string) {
     // Sender and recipient details
     from := C.From
     to   := []string{recipient}
-    msg  := []byte(subject + "\r\n\r\n" + message)
+    msg  := []byte(
+        "From: " + C.From + "\r\n" +
+        "To: " + recipient + "\r\n" +
+        "Subject: " + subject + "\r\n" +
+        "\r\n" + message)
     srv  := C.Host + ":" + C.Port
 
     // Send the email
