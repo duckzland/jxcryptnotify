@@ -12,6 +12,7 @@
             "subject": "My cool notification",
 
             // SMTP server
+            // To use local server such as exim4 server, input host: localhost and port:25 (or the email server port)
             "host": "mail.mysuperserver.local",
             "port": "465",
             "username": "nobody@nothing.local",

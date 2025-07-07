@@ -279,6 +279,34 @@ func sendEmail(recipient string, subject string, message string) {
 
 
 /**
+ * Send Email using local email server (exim4)
+ */
+func localSendEmail(recipient string, subject string, message string) {
+    C := Config.Servers.Email;
+
+    if C.Enable != true {
+        return
+    }
+
+    // Sender and recipient details
+    from := C.From
+    to   := []string{recipient}
+    msg  := []byte(subject + "\r\n\r\n" + message)
+    srv  := C.Host + ":" + C.Port
+
+    // Send the email
+    err := smtp.SendMail(srv, nil, from, to, msg)
+
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    log.Print(fmt.Sprintf("Sent Email to %s", recipient))
+
+}
+
+
+/**
  * Loading cryptos.json from CMC
  */
 func getTickerData() string {
@@ -396,7 +424,14 @@ func examineData(JsonData string, Job JobConfigType) {
             (Job.Comparison == "=" && sourceValue == targetValue) {
 
             log.Print(message)
-            sendEmail(Job.Email, subject, message)
+            C := Config.Servers.Email;
+
+            if C.Host == "localhost" {
+                localSendEmail(Job.Email, subject, message)
+
+            } else {
+                sendEmail(Job.Email, subject, message)
+            }
 
         } else {
             log.Print(fmt.Sprintf("Monitored Target Price for %s %s %s not reached yet",
