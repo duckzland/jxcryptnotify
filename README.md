@@ -1,26 +1,24 @@
-## Installation ##
+## Installation
 
-- Install go package, under Ubuntu :
+Install go package, under Ubuntu :
 ```
 sudo apt -y install golang
 ```
-
-- Build the package
+ 
+## Build the package
 ```
-# tested with go version 1.13.8
-# Might need to update when using 1.19 or 2.x version
-# go version go1.13.8 linux/amd64
-
+# tested with go version 1.23.1
 # Build the package
 go build main.go
 ```
 
-- Configure config.json
+## Configuring config.json
 
 1. Get SMTP server and its configuration for : host, port, username, password
 2. Edit the config_example.json and rename it config.json
 
-- [SYSTEMD] Using Systemd to fire the program instead of cronjob
+## Using Systemd to execute the program
+This is the preferred method when you have the proper access to administrate systemd service. Otherwise you can use cronjob to achieve the same result.
 
 1. Copy the cryptochecker_example.service to cryptochecker.service
 2. Edit the cryptochecker.service to match your needs
@@ -43,7 +41,7 @@ sudo systemctl status cryptochecker.service
 sudo journalctl -u cryptochecker.service
 ```
 
-- [CRONTAB] Create Cronjob to automatically fire the compiled program at x interval
+## Use CronJob to execute the program
 
 Under the linux user account, as best practice.. Do Not Run this as root account!
 ```
@@ -54,8 +52,6 @@ Setup cron to fire every 10 minutes
 ```
 */10 * * * *  /path/to/the/compiled/file
 ```
-
-
 
 ### TODO ###
 1. Proper & configurable folder path for storing JSON files
