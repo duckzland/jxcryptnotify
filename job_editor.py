@@ -136,8 +136,6 @@ def decorate_styling():
 def build_tree():
     global main_tree, root, columns
 
-    root = tk.Tk()
-    root.title("Manage crypto checker jobs")
     columns = ('email', 'source_coin', 'target_coin', 'source_value', 'target_value', 'comparison', 'email_sent_count')
 
     main_tree = ttk.Treeview(root, columns=columns, show="headings")
@@ -212,7 +210,7 @@ def load_config():
     global ui_config
 
     with open('configui.json', 'r') as f:
-    ui_config = json.load(f)
+        ui_config = json.load(f)
 
 
 
@@ -220,6 +218,9 @@ def load_config():
 def main():
 
     global root
+
+    root = tk.Tk()
+    root.title("Manage crypto checker jobs")
     
     # Loading the config
     load_config()
