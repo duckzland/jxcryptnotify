@@ -1,23 +1,23 @@
-## Installation
+### Installation
 
 Install go package, under Ubuntu :
 ```
 sudo apt -y install golang
 ```
  
-## Build the package
+### Build the package
 ```
 # tested with go version 1.23.1
 # Build the package
 go build main.go
 ```
 
-## Configuring config.json
+### Configuring config.json
 
 1. Get SMTP server and its configuration for : host, port, username, password
 2. Edit the config_example.json and rename it config.json
 
-## Using Systemd to execute the program
+### Using Systemd to execute the program
 This is the preferred method when you have the proper access to administrate systemd service. Otherwise you can use cronjob to achieve the same result.
 
 1. Copy the cryptochecker_example.service to cryptochecker.service
@@ -41,7 +41,7 @@ sudo systemctl status cryptochecker.service
 sudo journalctl -u cryptochecker.service
 ```
 
-## Use CronJob to execute the program
+### Use CronJob to execute the program
 
 Under the linux user account, as best practice.. Do Not Run this as root account!
 ```
