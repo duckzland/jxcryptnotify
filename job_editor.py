@@ -122,6 +122,33 @@ def action_command(command):
         subprocess.call(ui_config['actions'][command], shell=True)
 
 
+# Function for decorate or styling the treeview
+def decorate_styling():
+    # Styling
+    style = ttk.Style()
+    style.theme_use("clam")
+    style.configure("Treeview", rowheight=40) 
+    style.configure("Treeview.Heading", font=("Helvetica", 11, "bold"))
+
+
+
+# Function for building the main_tree
+def build_tree():
+    global main_tree, root, columns
+
+    root = tk.Tk()
+    root.title("Manage crypto checker jobs")
+    columns = ('email', 'source_coin', 'target_coin', 'source_value', 'target_value', 'comparison', 'email_sent_count')
+
+    main_tree = ttk.Treeview(root, columns=columns, show="headings")
+
+    main_tree.tag_configure("oddrow", background="#FAFAFA")
+    main_tree.tag_configure("evenrow", background="#F7F7F7")
+
+    main_tree.pack(fill="both", expand=True, padx=5, pady=5)
+    main_tree.bind("<Double-1>", lambda event: edit_cell(event))
+
+
 # Function for building rows
 def build_rows():
     global rows, main_tree, columns
@@ -180,31 +207,28 @@ def build_buttons():
 
 
 
+# Load the config
+def load_config():
+    global ui_config
+
+    with open('configui.json', 'r') as f:
+    ui_config = json.load(f)
+
+
+
 # Main function
 def main():
 
-    global worker_config, ui_config, main_tree, rows, root, columns
+    global root
     
-    with open('configui.json', 'r') as f:
-        ui_config = json.load(f)
+    # Loading the config
+    load_config()
 
-    root = tk.Tk()
-    root.title("Manage crypto checker jobs")
-    columns = ('email', 'source_coin', 'target_coin', 'source_value', 'target_value', 'comparison', 'email_sent_count')
+    # Style the table
+    decorate_styling()
 
-    # Styling
-    style = ttk.Style()
-    style.theme_use("clam")
-    style.configure("Treeview", rowheight=40) 
-    style.configure("Treeview.Heading", font=("Helvetica", 11, "bold"))
-
-    main_tree = ttk.Treeview(root, columns=columns, show="headings")
-
-    main_tree.tag_configure("oddrow", background="#FAFAFA")
-    main_tree.tag_configure("evenrow", background="#F7F7F7")
-
-    main_tree.pack(fill="both", expand=True, padx=5, pady=5)
-    main_tree.bind("<Double-1>", lambda event: edit_cell(event))
+    # Build the main treeview
+    build_tree()
 
     # Build headings
     build_headings()
