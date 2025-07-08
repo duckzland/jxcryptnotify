@@ -4,6 +4,7 @@ Install go package, under Ubuntu :
 ```
 sudo apt -y install golang
 ```
+
 &nbsp;
 &nbsp;
 
