@@ -1,4 +1,6 @@
 config.json
+config.json*
+configui.json
 cryptos.json
 cryptochecker.service
 start.sh

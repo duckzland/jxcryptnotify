@@ -1,12 +1,18 @@
 import json
 import subprocess
+import os
+import sys
 import tkinter as tk
 from tkinter import ttk
 
 # Global Variables
 active_editor = []
 main_tree = False
-main_config = {}
+worker_config = {}
+ui_config = {}
+root = {}
+columns = {}
+rows = {}
 
 
 # Function for editing cell
@@ -47,7 +53,7 @@ def edit_cell(event):
 
 # Function for saving all the rows data
 def save_rows():
-    global main_tree, main_config, active_editor
+    global main_tree, worker_config, active_editor
 
     if len(active_editor) != 0:
         active_editor[0].event_generate("<FocusOut>")
@@ -57,23 +63,28 @@ def save_rows():
     data = []
     for item_id in main_tree.get_children():
         values = main_tree.item(item_id, 'values')
+
+        # Refusing to save empty row
+        if all(not x for x in values):
+            continue
+
+
         item_data = {
             'email': values[0], 
-            'source_coin': values[0], 
-            'target_coin': values[1], 
-            'source_value': values[2], 
-            'target_value': values[3], 
-            'comparison': values[4], 
-            'email_sent_count': values[5] 
+            'source_coin': values[1], 
+            'target_coin': values[2], 
+            'source_value': values[3], 
+            'target_value': values[4], 
+            'comparison': values[5], 
+            'email_sent_count': values[6] 
         }
 
         data.append(item_data)
 
-    main_config['jobs'] = data
+    worker_config['jobs'] = data
 
     with open('config.json', 'w') as f:
-        json.dump(main_config, f, indent=4)
-        subprocess.run("./save_callback.sh")
+        json.dump(worker_config, f, indent=4)
 
 
 # Function for deleting row(s)
@@ -103,14 +114,79 @@ def add_row():
     main_tree.insert("", "end", values=['' for col in columns], tags=("oddrow" if i % 2 == 0 else "evenrow"))
 
 
+# Function for calling action command
+def action_command(command):
+    global ui_config
+
+    if ui_config['actions'] and ui_config['actions']['enable'] and ui_config['actions'][command]:
+        subprocess.call(ui_config['actions'][command], shell=True)
+
+
+# Function for building rows
+def build_rows():
+    global rows, main_tree, columns
+
+    with open('config.json', 'r') as f:
+        worker_config = json.load(f)
+        rows = worker_config['jobs']
+
+    for row in main_tree.get_children():
+        main_tree.delete(row)
+
+    # Build Rows
+    for i, item in enumerate(rows):
+        main_tree.insert("", "end", values=[item[col] for col in columns], tags=("oddrow" if i % 2 == 0 else "evenrow"))
+
+
+# Function for building headings
+def build_headings():
+    global main_tree
+
+    main_tree.heading("email", text="Email")
+    main_tree.heading("source_coin", text="Source Coin")
+    main_tree.heading("target_coin", text="Target Coin")
+    main_tree.heading("source_value", text="Source Value")
+    main_tree.heading("target_value", text="Target Value")
+    main_tree.heading("comparison", text="Comparison")
+    main_tree.heading("email_sent_count", text="Email Sent Count")
+
+
+# function for building Buttons
+def build_buttons():
+    global root
+
+    button_frame = tk.Frame(root, borderwidth=2)
+    button_frame.pack()
+
+    add_button = tk.Button(button_frame, text="Add", command=lambda: add_row())
+    add_button.pack(side=tk.LEFT, padx=5, pady=5)
+
+    delete_button = tk.Button(button_frame, text="Delete", command=lambda: delete_row())
+    delete_button.pack(side=tk.LEFT, padx=5, pady=5)
+
+    save_button = tk.Button(button_frame, text="Save", command=lambda: save_rows())
+    save_button.pack(side=tk.LEFT, padx=5, pady=5)
+
+    reload_button = tk.Button(button_frame, text="Reload", command=lambda: build_rows())
+    reload_button.pack(side=tk.LEFT, padx=5, pady=5)
+
+    if ui_config['actions'] and ui_config['actions']['enable'] and ui_config['actions']['push']:
+        push_button = tk.Button(button_frame, text="Upload to server", command=lambda: action_command('push'))
+        push_button.pack(side=tk.LEFT, padx=5, pady=5)
+
+    if ui_config['actions'] and ui_config['actions']['enable'] and ui_config['actions']['pull']:
+        pull_button = tk.Button(button_frame, text="Retrieve from server", command=lambda: action_command('pull'))
+        pull_button.pack(side=tk.LEFT, padx=5, pady=5)
+
+
+
 # Main function
 def main():
 
-    global main_config, main_tree, columns
+    global worker_config, ui_config, main_tree, rows, root, columns
     
-    with open('config.json', 'r') as f:
-        main_config = json.load(f)
-        rows = main_config['jobs']
+    with open('configui.json', 'r') as f:
+        ui_config = json.load(f)
 
     root = tk.Tk()
     root.title("Manage crypto checker jobs")
@@ -127,34 +203,17 @@ def main():
     main_tree.tag_configure("oddrow", background="#FAFAFA")
     main_tree.tag_configure("evenrow", background="#F7F7F7")
 
-    # Build headings
-    main_tree.heading("email", text="Email")
-    main_tree.heading("source_coin", text="Source Coin")
-    main_tree.heading("target_coin", text="Target Coin")
-    main_tree.heading("source_value", text="Source Value")
-    main_tree.heading("target_value", text="Target Value")
-    main_tree.heading("comparison", text="Comparison")
-    main_tree.heading("email_sent_count", text="Email Sent Count")
-
-    # Build Rows
-    for i, item in enumerate(rows):
-        main_tree.insert("", "end", values=[item[col] for col in columns], tags=("oddrow" if i % 2 == 0 else "evenrow"))
-
     main_tree.pack(fill="both", expand=True, padx=5, pady=5)
     main_tree.bind("<Double-1>", lambda event: edit_cell(event))
 
+    # Build headings
+    build_headings()
+
+    # Build Rows
+    build_rows()
+
     # Build Buttons
-    button_frame = tk.Frame(root, borderwidth=2)
-    button_frame.pack()
-
-    add_button = tk.Button(button_frame, text="Add", command=lambda: add_row())
-    add_button.pack(side=tk.LEFT, padx=5, pady=5)
-
-    delete_button = tk.Button(button_frame, text="Delete", command=lambda: delete_row())
-    delete_button.pack(side=tk.LEFT, padx=5, pady=5)
-
-    save_button = tk.Button(button_frame, text="Save", command=lambda: save_rows())
-    save_button.pack(side=tk.LEFT, padx=5, pady=5)
+    build_buttons()
 
     root.mainloop()
 

@@ -36,7 +36,6 @@
         "maximum_email_sent": 3
 
     },
-
     // Arrays of jobs to check for
     "jobs": [
         {

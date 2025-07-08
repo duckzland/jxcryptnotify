@@ -1,0 +1,14 @@
+// This is an example of json configuration file for the job_editor.py
+
+{
+
+    // Command to execute of push and pull actions, this is for pushing or pulling from a server, not needed for local usage
+    // You can utilize rsync, scp or custom api callback path using curl
+    // Example for rsync:
+    // "rsync -az --backup --suffix=`date +'.%y%m%d%H%M'` config.json myuser@myfolder:~/mypath/config.json"
+    "actions": {
+        "enable": false,
+        "push": "Custom command to use for pushing",
+        "pull": "Custom command to use for pulling"
+    }
+}
