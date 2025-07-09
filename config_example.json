@@ -37,26 +37,27 @@
 
     },
     // Arrays of jobs to check for
+    // Notice the type of data, follow the data type string, float or int
     "jobs": [
         {
              // This means the source value [1 SOL * the current sol to dot rate] < the target value [2.9 DOT]
             "email": "senditto@me.local",
-            "source_coin": "SOL",
-            "target_coin": "DOT",
-            "source_value": "1",
-            "target_value": "2.9",
-            "comparison": "<",
+            "source_coin": "SOL", // string
+            "target_coin": "DOT", // string
+            "source_value": 1, // float
+            "target_value": 2.9, // float
+            "comparison": "<", // string
 
             // The counter of how many email sent, this job will be ignored if this exceed maximum_email_sent
-            "email_sent_count": 0
+            "email_sent_count": 0 // integer
         },
         {
             // This means the source value [2721 SOL * the current sol to dot rate] > the target value [12700 DOT]
             "email": "iwantittoo@me.local",
             "source_coin": "SOL",
             "target_coin": "DOT",
-            "source_value": "2721",
-            "target_value": "12700",
+            "source_value": 2721,
+            "target_value": 12700,
             "comparison": ">",
 
             // The counter of how many email sent, this job will be ignored if this exceed maximum_email_sent
@@ -67,8 +68,8 @@
             "email": "iwantittoo@me.local",
             "source_coin": "SOL",
             "target_coin": "DOT",
-            "source_value": "100",
-            "target_value": "1000",
+            "source_value": 100,
+            "target_value": 1000,
             "comparison": "=",
 
             // The counter of how many email sent, this job will be ignored if this exceed maximum_email_sent
