@@ -1,18 +1,39 @@
 import json
 import subprocess
-import os
-import sys
 import tkinter as tk
 from tkinter import ttk
 
 # Global Variables
 active_editor = []
-main_tree = False
+main_tree = {}
 worker_config = {}
 ui_config = {}
 root = {}
 columns = {}
 rows = {}
+
+
+# Destroy active editor
+def destroy_active_editor():
+    global active_editor, main_tree
+    # Mark this cell as active so we can close it when other button pressed
+    print("Active Editor:", active_editor)
+
+    if len(active_editor) > 0:
+        # active_editor[0].event_generate("<FocusOut>")
+        # active_editor[0].event_generate("<Return>")
+        active_editor[0].destroy()
+
+        active_editor = []
+
+
+# Special callback to close the active editor when user clicked outside the elements
+def click_outside_item_callback(event):
+    global active_editor, main_tree
+    if event:
+        item = main_tree.identify('item', event.x, event.y)
+        if not item and event.widget.__class__.__name__ == "Treeview":
+            destroy_active_editor()
 
 
 # Function for editing cell
@@ -22,41 +43,103 @@ def edit_cell(event):
 
     if main_tree.identify_region(event.x, event.y) == "cell":
 
-        column = main_tree.identify_column(event.x)
-        row_id = main_tree.identify_row(event.y)
+        item_id = main_tree.focus()
 
-        # Get current cell value
-        current_value = main_tree.item(row_id, 'values')[int(column[1:]) - 1]
+        if not item_id:  # No item focused
+            return
 
-        # Get cell bounding box for placement
-        x, y, width, height = main_tree.bbox(row_id, column)
+        column_id = main_tree.identify_column(event.x)
+        col_index = main_tree.identify_row(event.y)
 
-        # Create and place entry widget
-        entry = tk.Entry(main_tree, width=width // 8)
-        entry.place(x=x, y=y, width=width, height=height)
-        entry.insert(0, current_value)
-        entry.focus_set()
+        # Retrieve the current value of the cell
+        current_value = main_tree.item(col_index, 'values')[int(column_id[1:]) - 1]
 
-        def save_edit(event=None):
-            global active_editor, main_tree
-            new_value = entry.get()
-            main_tree.set(row_id, column, new_value)
-            entry.destroy()
-            active_editor = []
+        # Determine if this column should use a dropdown or text editor
+        heading = main_tree.heading(column_id, 'text')
 
-        # Mark this cell as active so we can close it when other button pressed
+        if heading == "Comparison":
+            options = ["", "<", ">", "="]
+
+        elif "Coin" in heading:
+            options = [
+                "", "BTC", "ETH", "USDT", 
+                "SOL", "SUI", "VIRTUAL", "KAIA", 
+                "IP", "S", "XRP", "TRX", "DOGE", 
+                "ADA", "HYPE", "LINK", "AVAX", 
+                "SHIB", "HBAR", "VET"
+            ]
+        else:
+            options = False
+
+        if options:
+            entry = create_dropdown_editor(item_id, column_id, current_value, options)
+        else:
+            entry = create_entry_editor(item_id, column_id, current_value)
+
         active_editor = [entry]
-        
-        entry.bind("<Return>", save_edit)
-        entry.bind("<FocusOut>", save_edit)
+    
+
+# Function for creating select dropdown
+def create_dropdown_editor(item_id, column_id, current_value, options):
+    global main_tree, root
+
+    # Get the bounding box of the cell
+    bbox = main_tree.bbox(item_id, column_id)
+    if not bbox:
+        return
+
+    if not options:
+        return
+    
+    x, y, width, height = bbox
+
+    # Define dropdown options
+    selected_option = tk.StringVar(root)
+    selected_option.set(current_value if current_value in options else options[0])
+
+    # Create OptionMenu
+    editor = ttk.OptionMenu(main_tree, selected_option, *options, command=lambda val: save_edit(item_id, column_id, val, editor))
+    editor.place(x=x, y=y, width=width, height=height)
+    editor.focus_set()
+
+    return editor
+
+
+# Function for creating input text box
+def create_entry_editor(item_id, column_id, current_value):
+    global main_tree
+
+    # Get the bounding box of the cell
+    bbox = main_tree.bbox(item_id, column_id)
+    if not bbox:
+        return
+
+    x, y, width, height = bbox
+
+    # Create Entry widget
+    editor = ttk.Entry(main_tree, width=width // 8)
+    editor.insert(0, current_value)
+    editor.place(x=x, y=y, width=width, height=height)
+    editor.focus_set()
+    editor.bind("<Return>", lambda e: save_edit(item_id, column_id, editor.get(), editor))
+    editor.bind("<FocusOut>", lambda e: save_edit(item_id, column_id, editor.get(), editor))
+
+    return editor
+
+
+# Function for saving entries change
+def save_edit(item_id, column_id, new_value, editor_widget):
+    global main_tree
+
+    # Update the Treeview cell with the new value
+    main_tree.set(item_id, column_id, new_value)
 
 
 # Function for saving all the rows data
 def save_rows():
-    global main_tree, worker_config, active_editor
+    global main_tree, worker_config
 
-    if len(active_editor) != 0:
-        active_editor[0].event_generate("<FocusOut>")
+    destroy_active_editor()
 
     main_tree.focus_set()
 
@@ -67,7 +150,6 @@ def save_rows():
         # Refusing to save empty row
         if all(not x for x in values):
             continue
-
 
         item_data = {
             'email': values[0], 
@@ -89,10 +171,9 @@ def save_rows():
 
 # Function for deleting row(s)
 def delete_row():
-    global active_editor, main_tree
+    global main_tree
 
-    if len(active_editor) != 0:
-        active_editor[0].event_generate("<FocusOut>")
+    destroy_active_editor()
 
     selected_items = main_tree.selection()
     if selected_items:
@@ -102,10 +183,9 @@ def delete_row():
 
 # Function for adding a single row
 def add_row():
-    global main_tree, columns, active_editor
+    global main_tree, columns
 
-    if len(active_editor) != 0:
-        active_editor[0].event_generate("<FocusOut>")
+    destroy_active_editor()
     
     main_tree.focus_set()
 
@@ -124,12 +204,10 @@ def action_command(command):
 
 # Function for decorate or styling the treeview
 def decorate_styling():
-    # Styling
     style = ttk.Style()
     style.theme_use("clam")
     style.configure("Treeview", rowheight=40) 
     style.configure("Treeview.Heading", font=("Helvetica", 11, "bold"))
-
 
 
 # Function for building the main_tree
@@ -145,6 +223,7 @@ def build_tree():
 
     main_tree.pack(fill="both", expand=True, padx=5, pady=5)
     main_tree.bind("<Double-1>", lambda event: edit_cell(event))
+    main_tree.bind("<<TreeviewSelect>>", lambda event: destroy_active_editor())
 
 
 # Function for building rows
@@ -204,14 +283,12 @@ def build_buttons():
         pull_button.pack(side=tk.LEFT, padx=5, pady=5)
 
 
-
 # Load the config
 def load_config():
     global ui_config
 
     with open('configui.json', 'r') as f:
         ui_config = json.load(f)
-
 
 
 # Main function
@@ -240,8 +317,10 @@ def main():
     # Build Buttons
     build_buttons()
 
-    root.mainloop()
+    # Global event for closing active editor when user clicked outside the element
+    root.bind("<Button-1>", lambda event: click_outside_item_callback(event))
 
+    root.mainloop()
 
 # Boot the UI
 if __name__ == '__main__':
