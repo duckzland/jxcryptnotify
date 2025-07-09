@@ -165,16 +165,14 @@ def save_rows():
             messagebox.showerror("Validation Result", "Saving Failed due to invalid target coin ticker.")
             return "Invalid target coin"
         
-        # @todo: Golang expect string, we should change it to expect float!
         if not validate_decimal_string(values[3]):
-            messagebox.showerror("Validation Result", "Saving Failed due to invalid source value.a")
+            messagebox.showerror("Validation Result", "Saving Failed due to invalid source value.")
             return "Invalid source value"
         
         if not validate_absolute_float(float(values[3])):
             messagebox.showerror("Validation Result", "Saving Failed due to invalid source value.")
             return "Invalid source value"
-        
-        # @todo: Golang expect string, we should change it to expect float!
+
         if not validate_decimal_string(values[4]):
             messagebox.showerror("Validation Result", "Saving Failed due to invalid target valuea.")
             return "Invalid target value"
@@ -200,8 +198,8 @@ def save_rows():
             'email': values[0], 
             'source_coin': values[1], 
             'target_coin': values[2], 
-            'source_value': values[3], 
-            'target_value': values[4], 
+            'source_value': float(values[3]), 
+            'target_value': float(values[4]), 
             'comparison': values[5], 
             'email_sent_count': int(values[6]) 
         }
@@ -276,7 +274,7 @@ def build_tree():
 
 # Function for building rows
 def build_rows(showMessage=False):
-    global rows, main_tree, columns
+    global rows, main_tree, columns, worker_config
 
     with open('config.json', 'r') as f:
         worker_config = json.load(f)
@@ -291,6 +289,7 @@ def build_rows(showMessage=False):
 
     if showMessage:
         messagebox.showinfo("", showMessage)
+
 
 # Function for building headings
 def build_headings():
