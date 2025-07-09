@@ -1,7 +1,9 @@
 import json
 import subprocess
+import re
 import tkinter as tk
 from tkinter import ttk
+from tkinter import messagebox
 
 # Global Variables
 active_editor = []
@@ -11,16 +13,22 @@ ui_config = {}
 root = {}
 columns = {}
 rows = {}
+tickers = [
+    "BTC", "ETH", "USDT", 
+    "SOL", "SUI", "VIRTUAL", "KAIA", 
+    "IP", "S", "XRP", "TRX", "DOGE", 
+    "ADA", "HYPE", "LINK", "AVAX", 
+    "SHIB", "HBAR", "VET"
+]
+comparison = ["<", ">", "="]
 
 
 # Destroy active editor
 def destroy_active_editor():
     global active_editor, main_tree
-    # Mark this cell as active so we can close it when other button pressed
-    print("Active Editor:", active_editor)
 
     if len(active_editor) > 0:
-        # active_editor[0].event_generate("<FocusOut>")
+        active_editor[0].event_generate("<FocusOut>")
         # active_editor[0].event_generate("<Return>")
         active_editor[0].destroy()
 
@@ -39,7 +47,7 @@ def click_outside_item_callback(event):
 # Function for editing cell
 def edit_cell(event):
     
-    global active_editor, main_tree
+    global active_editor, main_tree, tickers, comparison
 
     if main_tree.identify_region(event.x, event.y) == "cell":
 
@@ -58,16 +66,10 @@ def edit_cell(event):
         heading = main_tree.heading(column_id, 'text')
 
         if heading == "Comparison":
-            options = ["", "<", ">", "="]
+            options = [""] + comparison
 
         elif "Coin" in heading:
-            options = [
-                "", "BTC", "ETH", "USDT", 
-                "SOL", "SUI", "VIRTUAL", "KAIA", 
-                "IP", "S", "XRP", "TRX", "DOGE", 
-                "ADA", "HYPE", "LINK", "AVAX", 
-                "SHIB", "HBAR", "VET"
-            ]
+            options = [""] + tickers
         else:
             options = False
 
@@ -98,7 +100,7 @@ def create_dropdown_editor(item_id, column_id, current_value, options):
     selected_option.set(current_value if current_value in options else options[0])
 
     # Create OptionMenu
-    editor = ttk.OptionMenu(main_tree, selected_option, *options, command=lambda val: save_edit(item_id, column_id, val, editor))
+    editor = ttk.OptionMenu(main_tree, selected_option, *options, command=lambda val: save_edit(item_id, column_id, val))
     editor.place(x=x, y=y, width=width, height=height)
     editor.focus_set()
 
@@ -121,14 +123,14 @@ def create_entry_editor(item_id, column_id, current_value):
     editor.insert(0, current_value)
     editor.place(x=x, y=y, width=width, height=height)
     editor.focus_set()
-    editor.bind("<Return>", lambda e: save_edit(item_id, column_id, editor.get(), editor))
-    editor.bind("<FocusOut>", lambda e: save_edit(item_id, column_id, editor.get(), editor))
+    editor.bind("<Return>", lambda e: save_edit(item_id, column_id, editor.get()))
+    editor.bind("<FocusOut>", lambda e: save_edit(item_id, column_id, editor.get()))
 
     return editor
 
 
 # Function for saving entries change
-def save_edit(item_id, column_id, new_value, editor_widget):
+def save_edit(item_id, column_id, new_value):
     global main_tree
 
     # Update the Treeview cell with the new value
@@ -151,6 +153,49 @@ def save_rows():
         if all(not x for x in values):
             continue
 
+        if not validate_email(values[0]):
+            messagebox.showerror("Validation Result", "Saving Failed due to invalid email format.")
+            return "Invalid Email"
+        
+        if not validate_ticker(values[1]):
+            messagebox.showerror("Validation Result", "Saving Failed due to invalid source coin ticker.")
+            return "Invalid source coin"
+        
+        if not validate_ticker(values[2]):
+            messagebox.showerror("Validation Result", "Saving Failed due to invalid target coin ticker.")
+            return "Invalid target coin"
+        
+        # @todo: Golang expect string, we should change it to expect float!
+        if not validate_decimal_string(values[3]):
+            messagebox.showerror("Validation Result", "Saving Failed due to invalid source value.a")
+            return "Invalid source value"
+        
+        if not validate_absolute_float(float(values[3])):
+            messagebox.showerror("Validation Result", "Saving Failed due to invalid source value.")
+            return "Invalid source value"
+        
+        # @todo: Golang expect string, we should change it to expect float!
+        if not validate_decimal_string(values[4]):
+            messagebox.showerror("Validation Result", "Saving Failed due to invalid target valuea.")
+            return "Invalid target value"
+        
+        if not validate_absolute_float(float(values[4])):
+            messagebox.showerror("Validation Result", "Saving Failed due to invalid target value.")
+            return "Invalid target value"
+        
+        if not validate_comparison(values[5]):
+            messagebox.showerror("Validation Result", "Saving Failed due to invalid comparison value.")
+            return "Invalid comparison"
+        
+        if not validate_numerical_string(values[6]):
+            messagebox.showerror("Validation Result", "Saving Failed due to invalid email sent count.")
+            return "Invalid email sent count"
+        
+        if not validate_positive_integer(int(values[6])):
+            print("values:", values[6])
+            messagebox.showerror("Validation Result", "Saving Failed due to invalid email sent count.")
+            return "Invalid email sent count"
+
         item_data = {
             'email': values[0], 
             'source_coin': values[1], 
@@ -158,7 +203,7 @@ def save_rows():
             'source_value': values[3], 
             'target_value': values[4], 
             'comparison': values[5], 
-            'email_sent_count': values[6] 
+            'email_sent_count': int(values[6]) 
         }
 
         data.append(item_data)
@@ -167,6 +212,7 @@ def save_rows():
 
     with open('config.json', 'w') as f:
         json.dump(worker_config, f, indent=4)
+        messagebox.showinfo("", "Save Completed")
 
 
 # Function for deleting row(s)
@@ -195,11 +241,13 @@ def add_row():
 
 
 # Function for calling action command
-def action_command(command):
+def action_command(command, showMessage=False):
     global ui_config
 
     if ui_config['actions'] and ui_config['actions']['enable'] and ui_config['actions'][command]:
         subprocess.call(ui_config['actions'][command], shell=True)
+        if showMessage:
+            messagebox.showinfo("", showMessage)
 
 
 # Function for decorate or styling the treeview
@@ -227,7 +275,7 @@ def build_tree():
 
 
 # Function for building rows
-def build_rows():
+def build_rows(showMessage=False):
     global rows, main_tree, columns
 
     with open('config.json', 'r') as f:
@@ -241,6 +289,8 @@ def build_rows():
     for i, item in enumerate(rows):
         main_tree.insert("", "end", values=[item[col] for col in columns], tags=("oddrow" if i % 2 == 0 else "evenrow"))
 
+    if showMessage:
+        messagebox.showinfo("", showMessage)
 
 # Function for building headings
 def build_headings():
@@ -271,15 +321,15 @@ def build_buttons():
     save_button = tk.Button(button_frame, text="Save", command=lambda: save_rows())
     save_button.pack(side=tk.LEFT, padx=5, pady=5)
 
-    reload_button = tk.Button(button_frame, text="Reload", command=lambda: build_rows())
+    reload_button = tk.Button(button_frame, text="Reload", command=lambda: build_rows("Data Reloaded"))
     reload_button.pack(side=tk.LEFT, padx=5, pady=5)
 
     if ui_config['actions'] and ui_config['actions']['enable'] and ui_config['actions']['push']:
-        push_button = tk.Button(button_frame, text="Upload to server", command=lambda: action_command('push'))
+        push_button = tk.Button(button_frame, text="Upload to server", command=lambda: action_command('push', "Upload to server completed"))
         push_button.pack(side=tk.LEFT, padx=5, pady=5)
 
     if ui_config['actions'] and ui_config['actions']['enable'] and ui_config['actions']['pull']:
-        pull_button = tk.Button(button_frame, text="Retrieve from server", command=lambda: action_command('pull'))
+        pull_button = tk.Button(button_frame, text="Retrieve from server", command=lambda: action_command('pull', "Retrieving data completed, You may wish to reload the data"))
         pull_button.pack(side=tk.LEFT, padx=5, pady=5)
 
 
@@ -289,6 +339,52 @@ def load_config():
 
     with open('configui.json', 'r') as f:
         ui_config = json.load(f)
+
+
+# Function for validating email
+def validate_email(email):
+    # A basic regex pattern for email validation
+    email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    if re.match(email_pattern, email):
+        return True
+    return False
+
+
+# Validation function for ticker value
+def validate_ticker(ticker):
+    global tickers
+    return ticker in tickers
+
+
+# Validation function for absolute float number, no 0 allowed
+def validate_absolute_float(value):
+    return isinstance(value, float) and value > 0
+
+
+# Validation function for operator defined in comparison
+def validate_comparison(operator):
+    global comparison
+    return operator in comparison
+
+
+# Validation function for positive integer with 0 allowed
+def validate_positive_integer(value):
+    return isinstance(value, int) and value >= 0
+
+
+# Validation to check if is numerical string
+def validate_numerical_string(value):
+    return value.isnumeric()
+
+
+# Validation to check if is decimal string
+def validate_decimal_string(value):
+    try:
+        float(value)
+        return True
+    except ValueError:
+        return False
+    
 
 
 # Main function
