@@ -44,13 +44,13 @@ type EmailConfigType struct {
 }
 
 type JobConfigType struct {
-	Email       string `json:"email"`
-	SourceCoin  string `json:"source_coin"`
-	TargetCoin  string `json:"target_coin"`
-	SourceValue string `json:"source_value"`
-	TargetValue string `json:"target_value"`
-	Comparison  string `json:"comparison"`
-	EmailCount  int64  `json:"email_sent_count"`
+	Email       string  `json:"email"`
+	SourceCoin  string  `json:"source_coin"`
+	TargetCoin  string  `json:"target_coin"`
+	SourceValue float64 `json:"source_value"`
+	TargetValue float64 `json:"target_value"`
+	Comparison  string  `json:"comparison"`
+	EmailCount  int64   `json:"email_sent_count"`
 }
 
 type EndpointConfigType struct {
@@ -352,7 +352,7 @@ func getExchangeData(Job JobConfigType) string {
 	}
 
 	q := url.Values{}
-	q.Add("amount", Job.SourceValue)
+	q.Add("amount", strconv.FormatFloat(Job.SourceValue, 'f', 4, 64))
 	q.Add("id", strconv.FormatInt(sc, 10))
 	q.Add("convert_id", strconv.FormatInt(tc, 10))
 
@@ -377,6 +377,18 @@ func getExchangeData(Job JobConfigType) string {
 }
 
 /**
+ * Function for extracting number of decimals from a float
+ */
+func NumDecPlaces(v float64) int {
+	s := strconv.FormatFloat(v, 'f', -1, 64)
+	i := strings.IndexByte(s, '.')
+	if i > -1 {
+		return len(s) - i - 1
+	}
+	return 0
+}
+
+/**
  * Examine the exhange data
  */
 func examineData(JsonData string, Job JobConfigType) int {
@@ -392,25 +404,30 @@ func examineData(JsonData string, Job JobConfigType) int {
 	if (strings.ToLower(Exchange.SourceSymbol) == strings.ToLower(Job.SourceCoin)) &&
 		(strings.ToLower(Exchange.TargetSymbol) == strings.ToLower(Job.TargetCoin)) {
 
-		sourceValue, _ := strconv.ParseFloat(Job.TargetValue, 64)
-		targetValue := Exchange.TargetAmount
-
 		subject := fmt.Sprintf("Monitored Target Price for %s %s %s Reached", Job.SourceCoin, Job.Comparison, Job.TargetCoin)
-		message := fmt.Sprintf("Current conversion from %s:%s is %s:%f, which has reached the configured target of %s:%f %s %s:%f",
-			Job.SourceCoin,
+		message := fmt.Sprintf("Current conversion from %f %s is %f %s, which has reached the configured target of %f %s %s %f %s",
 			Job.SourceValue,
+			Job.SourceCoin,
+			Exchange.TargetAmount,
 			Job.TargetCoin,
-			targetValue,
-			Job.TargetCoin,
-			sourceValue,
+			Job.SourceValue,
+			Job.SourceCoin,
 			Job.Comparison,
-			Job.TargetCoin,
-			targetValue,
-		)
+			Job.TargetValue,
+			Job.TargetCoin)
 
-		if (Job.Comparison == ">" && sourceValue < targetValue) ||
-			(Job.Comparison == "<" && sourceValue > targetValue) ||
-			(Job.Comparison == "=" && sourceValue == targetValue) {
+		// Float64 matching, dumb way and probably too simplistic?
+		dp := NumDecPlaces(Job.TargetValue)
+		cs := fmt.Sprintf("%s%d%s", "%.", dp, "f")
+		tv := fmt.Sprintf(cs, Job.TargetValue)
+		ev := fmt.Sprintf(cs, Exchange.TargetAmount)
+
+		// Debug
+		// println(fmt.Sprintf("Target: %s, Exchange: %s", tv, ev))
+
+		if (Job.Comparison == ">" && Job.TargetValue < Exchange.TargetAmount) ||
+			(Job.Comparison == "<" && Job.TargetValue > Exchange.TargetAmount) ||
+			(Job.Comparison == "=" && tv == ev) {
 
 			log.Print(message)
 			C := Config.Servers.Email
