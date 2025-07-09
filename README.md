@@ -65,8 +65,18 @@ Setup cron to fire every 10 minutes
 ```
 &nbsp;
 &nbsp;
-#### TODO
-1. Proper & configurable folder path for storing JSON files
-2. Daemonize the program
-3. Cache the exchange data
-4. Build against latest golang
+
+
+#### Installing and using the configurator UI
+The configurator is just a simple ui made using python3, to install:
+```
+apt install python3
+```
+
+To configure the ui, edit the configui_example.json and rename it configui.json
+
+The fire up the ui:
+```
+python3 job_editor.py
+```
+
