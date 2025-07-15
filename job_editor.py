@@ -15,7 +15,7 @@ columns = {}
 rows = {}
 tickers = [
     "BTC", "ETH", "USDT", 
-    "SOL", "SUI", "VIRTUAL", "KAIA", 
+    "SOL", "SUI", "PUMP", "VIRTUAL", "KAIA", 
     "IP", "S", "XRP", "TRX", "DOGE", 
     "ADA", "HYPE", "LINK", "AVAX", 
     "SHIB", "HBAR", "VET"
