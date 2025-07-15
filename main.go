@@ -415,18 +415,6 @@ func examineData(JsonData string, Job JobConfigType) int {
 		tvt := fmt.Sprintf(tvs, Job.TargetValue)
 		evt := fmt.Sprintf(tvs, Exchange.TargetAmount)
 
-		subject := fmt.Sprintf("Monitored Target Price for %s %s %s Reached", Job.SourceCoin, Job.Comparison, Job.TargetCoin)
-		message := fmt.Sprintf("Current conversion rate of %s %s is %s %s, which has reached the configured target of %s %s %s %s %s",
-			svt,
-			Job.SourceCoin,
-			evt,
-			Job.TargetCoin,
-			svt,
-			Job.SourceCoin,
-			Job.Comparison,
-			tvt, Job.TargetCoin,
-		)
-
 		// Debug
 		// println(fmt.Sprintf("Target: %s, Exchange: %s", tvt, evt))
 
@@ -434,7 +422,20 @@ func examineData(JsonData string, Job JobConfigType) int {
 			(Job.Comparison == "<" && Job.TargetValue > Exchange.TargetAmount) ||
 			(Job.Comparison == "=" && tvt == evt) {
 
+			subject := fmt.Sprintf("Monitored Target Price for %s %s %s Reached", Job.SourceCoin, Job.Comparison, Job.TargetCoin)
+			message := fmt.Sprintf("Current conversion rate of %s %s is %s %s, which has reached the configured target of %s %s %s %s %s",
+				svt,
+				Job.SourceCoin,
+				evt,
+				Job.TargetCoin,
+				svt,
+				Job.SourceCoin,
+				Job.Comparison,
+				tvt, Job.TargetCoin,
+			)
+
 			log.Print(message)
+
 			C := Config.Servers.Email
 
 			if C.Host == "localhost" {
