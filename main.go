@@ -404,30 +404,35 @@ func examineData(JsonData string, Job JobConfigType) int {
 	if (strings.ToLower(Exchange.SourceSymbol) == strings.ToLower(Job.SourceCoin)) &&
 		(strings.ToLower(Exchange.TargetSymbol) == strings.ToLower(Job.TargetCoin)) {
 
+		// Decimal formatting for text
+		svd := NumDecPlaces(Job.SourceValue)
+		tvd := NumDecPlaces(Job.TargetValue)
+
+		svs := fmt.Sprintf("%s%d%s", "%.", svd, "f")
+		tvs := fmt.Sprintf("%s%d%s", "%.", tvd, "f")
+
+		svt := fmt.Sprintf(svs, Job.SourceValue)
+		tvt := fmt.Sprintf(tvs, Job.TargetValue)
+		evt := fmt.Sprintf(tvs, Exchange.TargetAmount)
+
 		subject := fmt.Sprintf("Monitored Target Price for %s %s %s Reached", Job.SourceCoin, Job.Comparison, Job.TargetCoin)
-		message := fmt.Sprintf("Current conversion from %f %s is %f %s, which has reached the configured target of %f %s %s %f %s",
-			Job.SourceValue,
+		message := fmt.Sprintf("Current conversion from %s %s is %s %s, which has reached the configured target of %s %s %s %s %s",
+			svt,
 			Job.SourceCoin,
-			Exchange.TargetAmount,
+			evt,
 			Job.TargetCoin,
-			Job.SourceValue,
+			svt,
 			Job.SourceCoin,
 			Job.Comparison,
-			Job.TargetValue,
-			Job.TargetCoin)
-
-		// Float64 matching, dumb way and probably too simplistic?
-		dp := NumDecPlaces(Job.TargetValue)
-		cs := fmt.Sprintf("%s%d%s", "%.", dp, "f")
-		tv := fmt.Sprintf(cs, Job.TargetValue)
-		ev := fmt.Sprintf(cs, Exchange.TargetAmount)
+			tvt, Job.TargetCoin,
+		)
 
 		// Debug
-		// println(fmt.Sprintf("Target: %s, Exchange: %s", tv, ev))
+		// println(fmt.Sprintf("Target: %s, Exchange: %s", tvt, evt))
 
 		if (Job.Comparison == ">" && Job.TargetValue < Exchange.TargetAmount) ||
 			(Job.Comparison == "<" && Job.TargetValue > Exchange.TargetAmount) ||
-			(Job.Comparison == "=" && tv == ev) {
+			(Job.Comparison == "=" && tvt == evt) {
 
 			log.Print(message)
 			C := Config.Servers.Email
@@ -442,15 +447,15 @@ func examineData(JsonData string, Job JobConfigType) int {
 			return 1
 
 		} else {
-			log.Print(fmt.Sprintf("Current conversion from %f %s is %f %s, has not reached the configured target of %f %s %s %f %s yet",
-				Job.SourceValue,
+			log.Print(fmt.Sprintf("Current conversion from %s %s is %s %s, has not reached the configured target of %s %s %s %s %s yet",
+				svt,
 				Job.SourceCoin,
-				Exchange.TargetAmount,
+				evt,
 				Job.TargetCoin,
-				Job.SourceValue,
+				svt,
 				Job.SourceCoin,
 				Job.Comparison,
-				Job.TargetValue,
+				tvt,
 				Job.TargetCoin,
 			))
 		}
