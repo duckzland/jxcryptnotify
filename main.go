@@ -442,9 +442,15 @@ func examineData(JsonData string, Job JobConfigType) int {
 			return 1
 
 		} else {
-			log.Print(fmt.Sprintf("Monitored Target Price for %s %s %s not reached yet",
+			log.Print(fmt.Sprintf("Current conversion from %f %s is %f %s, has not reached the configured target of %f %s %s %f %s yet",
+				Job.SourceValue,
+				Job.SourceCoin,
+				Exchange.TargetAmount,
+				Job.TargetCoin,
+				Job.SourceValue,
 				Job.SourceCoin,
 				Job.Comparison,
+				Job.TargetValue,
 				Job.TargetCoin,
 			))
 		}
