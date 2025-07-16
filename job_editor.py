@@ -4,12 +4,16 @@ import re
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
+from tkinter import Listbox
+from tkinter import Entry
+from tkinter import Frame
 
 # Global Variables
 active_editor = []
 main_tree = {}
 worker_config = {}
 ui_config = {}
+tickers_map = {}
 root = {}
 columns = {}
 rows = {}
@@ -39,7 +43,7 @@ def click_outside_item_callback(event):
 # Function for editing cell
 def edit_cell(event):
     
-    global active_editor, main_tree, ui_config
+    global active_editor, main_tree, ui_config, tickers_map
 
     if main_tree.identify_region(event.x, event.y) == "cell":
 
@@ -56,22 +60,95 @@ def edit_cell(event):
 
         # Determine if this column should use a dropdown or text editor
         heading = main_tree.heading(column_id, 'text')
+        autocomplete = False
 
         if heading == "Comparison" and ui_config["comparison"]:
             options = [""] + ui_config["comparison"]
 
-        elif "Coin" in heading and ui_config["tickers"]:
-            options = [""] + ui_config["tickers"]
+        elif "Coin" in heading:
+            options = list(tickers_map.values())
+            autocomplete = True
         else:
             options = False
 
         if options:
-            entry = create_dropdown_editor(item_id, column_id, current_value, options)
+            if autocomplete:
+                entry = create_autocomplete_editor(item_id, column_id, current_value, options)
+            else:
+                entry = create_dropdown_editor(item_id, column_id, current_value, options)
         else:
             entry = create_entry_editor(item_id, column_id, current_value)
 
         active_editor = [entry]
     
+
+# Function for creating autocomplete editor
+def create_autocomplete_editor(item_id, column_id, current_value, options):
+    global main_tree, root
+
+    # Get the bounding box of the cell
+    bbox = main_tree.bbox(item_id, column_id)
+    if not bbox:
+        return
+
+    if not options:
+        return
+    
+    x, y, width, height = bbox
+
+    # Create Grouped widgets of Entry and Listbox inside a Frame
+    editor = Frame(main_tree)
+    entry = Entry(editor, width=width // 8)
+    entry.place(height=height)
+    print(current_value)
+    entry.insert(0, get_ticker_display_by_id(current_value))
+    entry.focus_set()
+
+    selector = Listbox(editor,width=width // 8, height=120)
+    selector.place(y=height, x=0, width=width, height=120)
+
+    editor.place(x=x, y=y, width=width, height=height + 120)
+
+    def _update(data):
+        selector.delete(0, tk.END)
+
+        for item in data:
+            selector.insert(tk.END, item)
+
+    def _fillout(e):
+        # Delete whatever is in the entry box
+        entry.delete(0, tk.END)
+
+        # Add clicked list item to entry box
+        entry.insert(0, selector.get(tk.ANCHOR))
+
+
+    def _check(e=None):
+        # grab what was typed
+        typed = entry.get()
+
+        if typed == '':
+            data = options
+        else:
+            data = []
+            for item in options:
+                if typed.lower() in item.lower():
+                    data.append(item)
+
+        # update our listbox with selected items
+        _update(data)	
+
+    # Refresh options using current value
+    _update(options)
+    _check()
+
+    entry.bind("<Key>", _check)
+    selector.bind('<<ListboxSelect>>', _fillout)
+    editor.bind("<Return>", lambda e: save_edit(item_id, column_id, entry.get()))
+    editor.bind("<FocusOut>", lambda e: save_edit(item_id, column_id, entry.get()))
+
+    return editor
+
 
 # Function for creating select dropdown
 def create_dropdown_editor(item_id, column_id, current_value, options):
@@ -111,7 +188,7 @@ def create_entry_editor(item_id, column_id, current_value):
     x, y, width, height = bbox
 
     # Create Entry widget
-    editor = ttk.Entry(main_tree, width=width // 8)
+    editor = Entry(main_tree, width=width // 8)
     editor.insert(0, current_value)
     editor.place(x=x, y=y, width=width, height=height)
     editor.focus_set()
@@ -188,8 +265,8 @@ def save_rows():
 
         item_data = {
             'email': values[0], 
-            'source_coin': values[1], 
-            'target_coin': values[2], 
+            'source_coin': int(get_ticker_id_by_display(values[1])), 
+            'target_coin': int(get_ticker_id_by_display(values[2])), 
             'source_value': float(values[3]), 
             'target_value': float(values[4]), 
             'comparison': values[5], 
@@ -277,7 +354,13 @@ def build_rows(showMessage=False):
 
     # Build Rows
     for i, item in enumerate(rows):
-        main_tree.insert("", "end", values=[item[col] for col in columns], tags=("oddrow" if i % 2 == 0 else "evenrow"))
+
+        # Do all the value conversion from saved value to displayed value here
+        values = [item[col] for col in columns]
+        values[1] = get_ticker_display_by_id(str(values[1]))
+        values[2] = get_ticker_display_by_id(str(values[2]))
+
+        main_tree.insert("", "end", values=values, tags=("oddrow" if i % 2 == 0 else "evenrow"))
 
     if showMessage:
         messagebox.showinfo("", showMessage)
@@ -300,7 +383,7 @@ def build_headings():
 def build_buttons():
     global root
 
-    button_frame = tk.Frame(root, borderwidth=2)
+    button_frame = Frame(root, borderwidth=2)
     button_frame.pack()
 
     add_button = tk.Button(button_frame, text="Add", command=lambda: add_row())
@@ -332,6 +415,59 @@ def load_config():
         ui_config = json.load(f)
 
 
+# Load the tickers data from cryptos.json
+def load_tickers():
+    global tickers_map
+    tickers_map = {}
+
+    with open('cryptos.json', 'r') as f:
+        data = json.load(f)
+        if data and data["values"]:
+            for item in data["values"]:
+                tickers_map[str(item[0])] = "{id}|{ticker} - {info}".format(id=item[0], ticker=item[2], info=item[1])
+
+
+
+# Function for get the ticker display from a ticker id string
+def get_ticker_display_by_id(ticker_id):
+    global tickers_map
+
+    if ticker_id.isnumeric() and tickers_map and ticker_id in tickers_map:
+        return tickers_map[ticker_id]
+    
+    maybe_id = get_ticker_id_by_display(ticker_id)
+    if maybe_id and maybe_id in tickers_map:
+        return tickers_map[maybe_id]
+
+    return ""
+
+
+# Functon for get the ticker id from a ticker display
+def get_ticker_id_by_display(ticker_display):
+    global tickers_map
+
+    if ticker_display.isnumeric():
+        return ticker_display
+    
+    ticker = ticker_display.split("|")
+    if ticker[0] and ticker[0].isnumeric() and ticker[0] in tickers_map:
+        return ticker[0]
+    
+    # This supposed to Guess the ticker from malformed ticker string.
+    # else:
+
+    #     st = []
+    #     for key, val in tickers_map.items():
+    #         t = val.split("|")
+    #         z = t[1].split(" - ")
+    #         if z[0] == ticker_display:
+    #             st.append(key)
+    #     if len(st) == 1:
+    #         return st[0]
+    
+    return False
+  
+
 # Function for validating email
 def validate_email(email):
     # A basic regex pattern for email validation
@@ -343,8 +479,16 @@ def validate_email(email):
 
 # Validation function for ticker value
 def validate_ticker(ticker):
-    global ui_config
-    return ui_config["tickers"] and ticker in ui_config["tickers"]
+    global tickers_map
+
+    tid = False
+
+    if ticker.isnumeric():
+        tid = ticker
+    else:
+        tid = get_ticker_id_by_display(ticker)
+
+    return tid and tid in tickers_map
 
 
 # Validation function for absolute float number, no 0 allowed
@@ -355,7 +499,7 @@ def validate_absolute_float(value):
 # Validation function for operator defined in comparison
 def validate_comparison(operator):
     global ui_config
-    return ui_config["comparison"] and operator in comparison
+    return ui_config["comparison"] and operator in ui_config["comparison"]
 
 
 # Validation function for positive integer with 0 allowed
@@ -377,7 +521,6 @@ def validate_decimal_string(value):
         return False
     
 
-
 # Main function
 def main():
 
@@ -388,6 +531,9 @@ def main():
     
     # Loading the config
     load_config()
+
+    # Load the tickers data
+    load_tickers()
 
     # Style the table
     decorate_styling()
