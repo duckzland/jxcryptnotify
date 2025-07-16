@@ -42,8 +42,8 @@
         {
              // This means the source value [1 SOL * the current sol to dot rate] < the target value [2.9 DOT]
             "email": "senditto@me.local",
-            "source_coin": "SOL", // string
-            "target_coin": "DOT", // string
+            "source_coin": 5426, // Int, get the value from CMC crypto id for solana
+            "target_coin": 6636, // Int, get the value from CMC crypto id for polkadot
             "source_value": 1, // float
             "target_value": 2.9, // float
             "comparison": "<", // string
@@ -54,8 +54,8 @@
         {
             // This means the source value [2721 SOL * the current sol to dot rate] > the target value [12700 DOT]
             "email": "iwantittoo@me.local",
-            "source_coin": "SOL",
-            "target_coin": "DOT",
+            "source_coin": 5426, // Int, get the value from CMC crypto id for solana
+            "target_coin": 6636, // Int, get the value from CMC crypto id for polkadot
             "source_value": 2721,
             "target_value": 12700,
             "comparison": ">",
@@ -66,8 +66,8 @@
         {
             // This means the source value [100 SOL * the current sol to dot rate] = the target value [1000 DOT]
             "email": "iwantittoo@me.local",
-            "source_coin": "SOL",
-            "target_coin": "DOT",
+            "source_coin": 5426, // Int, get the value from CMC crypto id for solana
+            "target_coin": 6636, // Int, get the value from CMC crypto id for polkadot
             "source_value": 100,
             "target_value": 1000,
             "comparison": "=",

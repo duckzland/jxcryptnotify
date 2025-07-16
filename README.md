@@ -23,6 +23,8 @@ go build main.go
 1. Get SMTP server and its configuration for : host, port, username, password
 2. Edit the config_example.json and rename it config.json
 
+*** Remember to fetch the correct UCID from CMC for the target and source token
+
 &nbsp;
 &nbsp;
 

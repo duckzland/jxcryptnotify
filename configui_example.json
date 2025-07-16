@@ -1,15 +1,6 @@
 // This is an example of json configuration file for the job_editor.py
 
 {
-    // Selectable tickers, please look at cryptos.json for all valid ticker that CMC supports
-    "tickers": [
-        "BTC", "ETH", "USDT", 
-        "SOL", "SUI", "PUMP", "VIRTUAL",
-        "IP", "S", "XRP", "TRX", "DOGE", 
-        "ADA", "HYPE", "LINK", "AVAX", 
-        "SHIB", "HBAR", "VET"
-    ],
-
     // Valid value comparison, only supports <,  > and =
     "comparison": ["<", ">", "="],
 
