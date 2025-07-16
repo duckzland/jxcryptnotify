@@ -45,8 +45,8 @@ type EmailConfigType struct {
 
 type JobConfigType struct {
 	Email       string  `json:"email"`
-	SourceCoin  string  `json:"source_coin"`
-	TargetCoin  string  `json:"target_coin"`
+	SourceCoin  int64   `json:"source_coin"`
+	TargetCoin  int64   `json:"target_coin"`
 	SourceValue float64 `json:"source_value"`
 	TargetValue float64 `json:"target_value"`
 	Comparison  string  `json:"comparison"`
@@ -341,20 +341,10 @@ func getExchangeData(Job JobConfigType) string {
 		log.Fatal(err)
 	}
 
-	sc := convertCryptoIdFromSymbol(Job.SourceCoin)
-	if sc == 0 {
-		log.Fatal("Failed to get proper crypto id")
-	}
-
-	tc := convertCryptoIdFromSymbol(Job.TargetCoin)
-	if tc == 0 {
-		log.Fatal("Failed to get proper crypto id")
-	}
-
 	q := url.Values{}
 	q.Add("amount", strconv.FormatFloat(Job.SourceValue, 'f', 4, 64))
-	q.Add("id", strconv.FormatInt(sc, 10))
-	q.Add("convert_id", strconv.FormatInt(tc, 10))
+	q.Add("id", strconv.FormatInt(Job.SourceCoin, 10))
+	q.Add("convert_id", strconv.FormatInt(Job.TargetCoin, 10))
 
 	req.URL.RawQuery = q.Encode()
 
@@ -401,8 +391,8 @@ func examineData(JsonData string, Job JobConfigType) int {
 		log.Fatal(wrappedErr)
 	}
 
-	if (strings.ToLower(Exchange.SourceSymbol) == strings.ToLower(Job.SourceCoin)) &&
-		(strings.ToLower(Exchange.TargetSymbol) == strings.ToLower(Job.TargetCoin)) {
+	if (Exchange.SourceId == Job.SourceCoin) &&
+		(Exchange.TargetId == Job.TargetCoin) {
 
 		// Decimal formatting for text
 		svd := NumDecPlaces(Job.SourceValue)
@@ -422,17 +412,21 @@ func examineData(JsonData string, Job JobConfigType) int {
 			(Job.Comparison == "<" && Job.TargetValue > Exchange.TargetAmount) ||
 			(Job.Comparison == "=" && tvt == evt) {
 
-			subject := fmt.Sprintf("Monitored Target Price for %s %s %s Reached", Job.SourceCoin, Job.Comparison, Job.TargetCoin)
+			subject := fmt.Sprintf("Monitored Target Price for %s %s %s Reached", Exchange.SourceSymbol, Job.Comparison, Exchange.TargetSymbol)
 			message := fmt.Sprintf("Current conversion rate of %s %s is %s %s, which has reached the configured target of %s %s %s %s %s",
 				svt,
-				Job.SourceCoin,
+				Exchange.SourceSymbol,
 				evt,
-				Job.TargetCoin,
+				Exchange.TargetSymbol,
 				svt,
-				Job.SourceCoin,
+				Exchange.SourceSymbol,
 				Job.Comparison,
-				tvt, Job.TargetCoin,
+				tvt,
+				Exchange.TargetSymbol,
 			)
+
+			// Debug
+			// println(fmt.Sprintf("Subject: %s, Message: %s", subject, message))
 
 			log.Print(message)
 
@@ -450,14 +444,14 @@ func examineData(JsonData string, Job JobConfigType) int {
 		} else {
 			log.Print(fmt.Sprintf("Current conversion rate of %s %s is %s %s, has not reached the configured target of %s %s %s %s %s yet",
 				svt,
-				Job.SourceCoin,
+				Exchange.SourceSymbol,
 				evt,
-				Job.TargetCoin,
+				Exchange.TargetSymbol,
 				svt,
-				Job.SourceCoin,
+				Exchange.SourceSymbol,
 				Job.Comparison,
 				tvt,
-				Job.TargetCoin,
+				Exchange.TargetSymbol,
 			))
 		}
 	}
@@ -511,16 +505,14 @@ func fileExists(path string) (bool, error) {
 /**
  * Helper function for converting crypto symbol to CMC crypto id
  */
-func convertCryptoIdFromSymbol(symbol string) int64 {
-	s := strings.ToLower(symbol)
-
+func convertCryptoSymbolFromId(id int64) string {
 	for _, crypto := range Cryptos.Values {
-		if strings.ToLower(crypto.Symbol) == s {
-			return crypto.Id
+		if crypto.Id == id {
+			return crypto.Symbol
 		}
 	}
 
-	return 0
+	return ""
 }
 
 /**
@@ -563,9 +555,9 @@ func main() {
 		if Config.Servers.MaxEmail > 0 && Config.Jobs[i].EmailCount >= Config.Servers.MaxEmail {
 			log.Print(fmt.Sprintf("Not Monitoring Job #%d for %s %s %s due to maximum email sent limit reached.",
 				i,
-				c.SourceCoin,
+				convertCryptoSymbolFromId(c.SourceCoin),
 				c.Comparison,
-				c.TargetCoin,
+				convertCryptoSymbolFromId(c.TargetCoin),
 			))
 
 			continue
