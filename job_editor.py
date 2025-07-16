@@ -13,14 +13,6 @@ ui_config = {}
 root = {}
 columns = {}
 rows = {}
-tickers = [
-    "BTC", "ETH", "USDT", 
-    "SOL", "SUI", "PUMP", "VIRTUAL", "KAIA", 
-    "IP", "S", "XRP", "TRX", "DOGE", 
-    "ADA", "HYPE", "LINK", "AVAX", 
-    "SHIB", "HBAR", "VET"
-]
-comparison = ["<", ">", "="]
 
 
 # Destroy active editor
@@ -47,7 +39,7 @@ def click_outside_item_callback(event):
 # Function for editing cell
 def edit_cell(event):
     
-    global active_editor, main_tree, tickers, comparison
+    global active_editor, main_tree, ui_config
 
     if main_tree.identify_region(event.x, event.y) == "cell":
 
@@ -65,11 +57,11 @@ def edit_cell(event):
         # Determine if this column should use a dropdown or text editor
         heading = main_tree.heading(column_id, 'text')
 
-        if heading == "Comparison":
-            options = [""] + comparison
+        if heading == "Comparison" and ui_config["comparison"]:
+            options = [""] + ui_config["comparison"]
 
-        elif "Coin" in heading:
-            options = [""] + tickers
+        elif "Coin" in heading and ui_config["tickers"]:
+            options = [""] + ui_config["tickers"]
         else:
             options = False
 
@@ -351,8 +343,8 @@ def validate_email(email):
 
 # Validation function for ticker value
 def validate_ticker(ticker):
-    global tickers
-    return ticker in tickers
+    global ui_config
+    return ui_config["tickers"] and ticker in ui_config["tickers"]
 
 
 # Validation function for absolute float number, no 0 allowed
@@ -362,8 +354,8 @@ def validate_absolute_float(value):
 
 # Validation function for operator defined in comparison
 def validate_comparison(operator):
-    global comparison
-    return operator in comparison
+    global ui_config
+    return ui_config["comparison"] and operator in comparison
 
 
 # Validation function for positive integer with 0 allowed
