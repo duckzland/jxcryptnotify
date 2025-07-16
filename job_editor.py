@@ -453,18 +453,6 @@ def get_ticker_id_by_display(ticker_display):
     if ticker[0] and ticker[0].isnumeric() and ticker[0] in tickers_map:
         return ticker[0]
     
-    # This supposed to Guess the ticker from malformed ticker string.
-    # else:
-
-    #     st = []
-    #     for key, val in tickers_map.items():
-    #         t = val.split("|")
-    #         z = t[1].split(" - ")
-    #         if z[0] == ticker_display:
-    #             st.append(key)
-    #     if len(st) == 1:
-    #         return st[0]
-    
     return False
   
 
