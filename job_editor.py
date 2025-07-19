@@ -424,6 +424,10 @@ def load_tickers():
         data = json.load(f)
         if data and data["values"]:
             for item in data["values"]:
+                # This coin is marked as inactive by CMC skipping it
+                if item[4] == 0 or item[5] == 0:
+                    continue
+                
                 tickers_map[str(item[0])] = "{id}|{ticker} - {info}".format(id=item[0], ticker=item[2], info=item[1])
 
 
