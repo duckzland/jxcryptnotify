@@ -427,7 +427,6 @@ def load_tickers():
                 tickers_map[str(item[0])] = "{id}|{ticker} - {info}".format(id=item[0], ticker=item[2], info=item[1])
 
 
-
 # Function for get the ticker display from a ticker id string
 def get_ticker_display_by_id(ticker_id):
     global tickers_map
