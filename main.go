@@ -278,7 +278,7 @@ func sendEmail(recipient string, subject string, message string) {
 
 	c.Quit()
 
-	log.Print(fmt.Sprintf("Sent Email to %s", recipient))
+	log.Printf("Sent Email to %s", recipient)
 }
 
 /**
@@ -305,7 +305,7 @@ func localSendEmail(recipient string, subject string, message string) {
 		log.Fatal(wrappedErr)
 	}
 
-	log.Print(fmt.Sprintf("Sent Email to %s", recipient))
+	log.Printf("Sent Email to %s", recipient)
 
 }
 
@@ -457,7 +457,7 @@ func examineData(JsonData string, Job JobConfigType) int {
 			return 1
 
 		} else {
-			log.Print(fmt.Sprintf("Current conversion rate of %s %s is %s %s, has not reached the configured target of %s %s %s %s %s yet",
+			log.Printf("Current conversion rate of %s %s is %s %s, has not reached the configured target of %s %s %s %s %s yet",
 				svt,
 				Exchange.SourceSymbol,
 				evt,
@@ -467,7 +467,7 @@ func examineData(JsonData string, Job JobConfigType) int {
 				Job.Comparison,
 				tvt,
 				Exchange.TargetSymbol,
-			))
+			)
 		}
 	}
 
@@ -568,12 +568,12 @@ func main() {
 
 		// Email sent counter limit reached, dont process further
 		if Config.Servers.MaxEmail > 0 && Config.Jobs[i].EmailCount >= Config.Servers.MaxEmail {
-			log.Print(fmt.Sprintf("Not Monitoring Job #%d for %s %s %s due to maximum email sent limit reached.",
+			log.Printf("Not Monitoring Job #%d for %s %s %s due to maximum email sent limit reached.",
 				i,
 				convertCryptoSymbolFromId(c.SourceCoin),
 				c.Comparison,
 				convertCryptoSymbolFromId(c.TargetCoin),
-			))
+			)
 
 			continue
 		}
